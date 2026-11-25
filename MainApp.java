@@ -115,8 +115,7 @@ public class MainApp extends JFrame {
         panel.setBackground(Color.WHITE);
         panel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(203, 213, 225), 1, true),
-                new EmptyBorder(25, 25, 25, 25)
-        ));
+                new EmptyBorder(25, 25, 25, 25)));
 
         JLabel label = new JLabel(groupTitle);
         label.setFont(new Font("SansSerif", Font.BOLD, 18));
@@ -151,14 +150,15 @@ public class MainApp extends JFrame {
     private void showAboutDialog() {
         String aboutMessage = """
                 OS CPU & Disk Scheduling Simulator
-                
+
                 Group Number: [Insert Group Number]
-                
+
                 Group Members:
-                • [Member 1 Name] - Shortest Job First (SJF)
-                • [Member 2 Name] - Multilevel Queue
-                • [Member 3 Name] - Priority (Preemptive)
-                • [Member 4 Name] - SCAN & LOOK Disk Scheduling
+                • [Member 1 Zach] - Shortest Job First (SJF)
+                • [Member 2 Roman] - Multilevel Queue
+                • [Member 3 Kent] - Priority (Preemptive)
+                • [Member 4 Pierre] - SCAN Disk Scheduling
+                • [Member 5 Carlito] - LOOK Disk Scheduling
                 """;
         JOptionPane.showMessageDialog(this, aboutMessage, "About Group Project", JOptionPane.INFORMATION_MESSAGE);
     }
