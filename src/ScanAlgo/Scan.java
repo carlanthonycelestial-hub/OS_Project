@@ -55,7 +55,10 @@ public class Scan extends JPanel {
         }
     }
 
+    private final MainApp mainApp;
+
     public Scan(MainApp mainApp) {
+        this.mainApp = mainApp;
         setLayout(new BorderLayout(12, 12));
         setBorder(new EmptyBorder(15, 20, 15, 20));
         setBackground(new Color(248, 250, 252));
@@ -320,6 +323,22 @@ public class Scan extends JPanel {
             chartMaxTrack = maxTrack;
             chartSteps = steps;
             chartPanel.repaint();
+
+            // Transfer to DiskResultPanel
+            java.util.List<src.Gui.DiskResultPanel.StepData> resultSteps = new ArrayList<>();
+            for (ScanScheduler.Step s : steps) {
+                resultSteps.add(new src.Gui.DiskResultPanel.StepData(s.order, s.id, s.from, s.to, s.distance));
+            }
+            mainApp.getDiskResultPanel().displayResult(
+                    "SCAN Disk Scheduling",
+                    MainApp.SCAN_CARD,
+                    head,
+                    maxTrack,
+                    resultSteps,
+                    ScanScheduler.totalSeek(steps),
+                    ScanScheduler.averageSeek(steps, requests.size()),
+                    seq.toString()
+            );
         } catch (InvalidInput ex) {
             if (ex.row >= 0) {
                 selectCell(ex.row, ex.col);

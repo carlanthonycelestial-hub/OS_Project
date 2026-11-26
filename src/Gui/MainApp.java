@@ -4,6 +4,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
 import src.LookAlgo.Look;
+import src.MultipleLevelAlgo.MultiLevel;
 import src.PriorityAlgo.Priority;
 import src.SJFAlgo.SJF;
 import src.ScanAlgo.Scan;
@@ -20,6 +21,9 @@ public class MainApp extends JFrame {
     public static final String PRIORITY_CARD = "PRIORITY";
     public static final String SCAN_CARD = "SCAN";
     public static final String LOOK_CARD = "LOOK";
+    public static final String DISK_RESULT_CARD = "DISK_RESULT";
+
+    private final DiskResultPanel diskResultPanel;
 
     public MainApp() {
         setTitle("OS Scheduling Simulator - CPU & Disk Scheduling");
@@ -31,16 +35,22 @@ public class MainApp extends JFrame {
         cardLayout = new CardLayout();
         mainContainer = new JPanel(cardLayout);
 
+        diskResultPanel = new DiskResultPanel(this);
+
         mainContainer.add(createMainMenuPanel(), MENU_CARD);
         mainContainer.add(new SJF(this), SJF_CARD);
-
-        mainContainer.add(new PlaceholderPanel(this, "Multilevel Queue Scheduling"), MLQ_CARD);
+        mainContainer.add(new MultiLevel(this), MLQ_CARD);
         mainContainer.add(new Priority(this), PRIORITY_CARD);
         mainContainer.add(new Scan(this), SCAN_CARD);
         mainContainer.add(new Look(this), LOOK_CARD);
+        mainContainer.add(diskResultPanel, DISK_RESULT_CARD);
 
         add(mainContainer);
         showCard(MENU_CARD);
+    }
+
+    public DiskResultPanel getDiskResultPanel() {
+        return diskResultPanel;
     }
 
     public void showCard(String cardName) {

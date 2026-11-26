@@ -52,7 +52,10 @@ public class Look extends JPanel {
         }
     }
 
+    private final MainApp mainApp;
+
     public Look(MainApp mainApp) {
+        this.mainApp = mainApp;
         setLayout(new BorderLayout(12, 12));
         setBorder(new EmptyBorder(15, 20, 15, 20));
         setBackground(new Color(248, 250, 252));
@@ -310,6 +313,22 @@ public class Look extends JPanel {
             chartHead = head;
             chartSteps = steps;
             chartPanel.repaint();
+
+            // Transfer to DiskResultPanel
+            java.util.List<src.Gui.DiskResultPanel.StepData> resultSteps = new ArrayList<>();
+            for (LookScheduler.Step s : steps) {
+                resultSteps.add(new src.Gui.DiskResultPanel.StepData(s.order, s.id, s.from, s.to, s.distance));
+            }
+            mainApp.getDiskResultPanel().displayResult(
+                    "LOOK Disk Scheduling",
+                    MainApp.LOOK_CARD,
+                    head,
+                    -1,
+                    resultSteps,
+                    LookScheduler.totalSeek(steps),
+                    LookScheduler.averageSeek(steps),
+                    seq.toString()
+            );
         } catch (InvalidInput ex) {
             if (ex.row >= 0) {
                 selectCell(ex.row, ex.col);
