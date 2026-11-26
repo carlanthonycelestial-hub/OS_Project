@@ -29,7 +29,7 @@ public class MainApp extends JFrame {
         mainContainer.add(new SJF(this), SJF_CARD);
 
         mainContainer.add(new PlaceholderPanel(this, "Multilevel Queue Scheduling"), MLQ_CARD);
-        mainContainer.add(new PlaceholderPanel(this, "Priority Scheduling (Preemptive)"), PRIORITY_CARD);
+        mainContainer.add(new Priority(this), PRIORITY_CARD);
         mainContainer.add(new PlaceholderPanel(this, "SCAN Disk Scheduling"), SCAN_CARD);
         mainContainer.add(new PlaceholderPanel(this, "LOOK Disk Scheduling"), LOOK_CARD);
 
@@ -157,8 +157,7 @@ public class MainApp extends JFrame {
                 • [Member 1 Zach] - Shortest Job First (SJF)
                 • [Member 2 Roman] - Multilevel Queue
                 • [Member 3 Kent] - Priority (Preemptive)
-                • [Member 4 Pierre] - SCAN Disk Scheduling
-                • [Member 5 Carlito] - LOOK Disk Scheduling
+                • [Member 4 Pierre & Carl] - SCAN & LOOK Disk Scheduling
                 """;
         JOptionPane.showMessageDialog(this, aboutMessage, "About Group Project", JOptionPane.INFORMATION_MESSAGE);
     }

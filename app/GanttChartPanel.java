@@ -23,8 +23,14 @@ final class GanttChartPanel extends JPanel {
     private static final int MARGIN = 20, TOP_Y = 10, BAR_HEIGHT = 32, LABEL_GAP = 6;
 
     private List<SJFScheduler.Block> blocks = new ArrayList<>();
+    private final String emptyMessage;
 
     GanttChartPanel() {
+        this("Run 'Compute SJF' to generate the Gantt chart.");
+    }
+
+    GanttChartPanel(String emptyMessage) {
+        this.emptyMessage = emptyMessage;
         setBackground(Color.WHITE);
         ToolTipManager.sharedInstance().registerComponent(this);
     }
@@ -61,7 +67,7 @@ final class GanttChartPanel extends JPanel {
         if (blocks.isEmpty()) {
             g2.setColor(Color.GRAY);
             g2.setFont(EMPTY_FONT);
-            g2.drawString("Run 'Compute SJF' to generate the Gantt chart.", 20, 38);
+            g2.drawString(emptyMessage, 20, 38);
             return;
         }
 
