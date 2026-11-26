@@ -272,12 +272,13 @@ public class Look extends JPanel {
 
     private void loadSampleData() {
         stopEditing();
-        LookSample.Dataset data = LookSample.classicRight();
-        headField.setText(String.valueOf(data.initialHead));
-        directionBox.setSelectedIndex(data.movingRight ? 0 : 1);
+        // Sample: Head 53, moving Right
+        headField.setText("53");
+        directionBox.setSelectedIndex(0); // Right
         inputModel.setRowCount(0);
-        for (LookScheduler.Request r : data.requests)
-            inputModel.addRow(new Object[] { r.id, String.valueOf(r.track) });
+        String[][] sample = { {"R1","98"}, {"R2","183"}, {"R3","37"}, {"R4","122"}, {"R5","14"}, {"R6","124"}, {"R7","65"}, {"R8","67"} };
+        for (String[] row : sample)
+            inputModel.addRow(row);
     }
 
     private void resetAll() {

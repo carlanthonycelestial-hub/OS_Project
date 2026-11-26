@@ -276,13 +276,14 @@ public class Scan extends JPanel {
 
     private void loadSampleData() {
         stopEditing();
-        ScanSample.Dataset data = ScanSample.classicLeft();
-        headField.setText(String.valueOf(data.initialHead));
-        maxTrackField.setText(String.valueOf(data.maxTrack));
-        directionBox.setSelectedIndex(data.movingRight ? 0 : 1);
+        // Sample: Head 53, max track 199, moving Left
+        headField.setText("53");
+        maxTrackField.setText("199");
+        directionBox.setSelectedIndex(1); // Left
         inputModel.setRowCount(0);
-        for (ScanScheduler.Request r : data.requests)
-            inputModel.addRow(new Object[] { r.id, String.valueOf(r.track) });
+        String[][] sample = { {"R1","98"}, {"R2","183"}, {"R3","37"}, {"R4","122"}, {"R5","14"}, {"R6","124"}, {"R7","65"}, {"R8","67"} };
+        for (String[] row : sample)
+            inputModel.addRow(row);
     }
 
     private void resetAll() {

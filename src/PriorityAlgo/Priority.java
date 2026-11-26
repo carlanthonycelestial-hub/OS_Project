@@ -225,14 +225,10 @@ public class Priority extends JPanel {
     private void loadSampleData() {
         stopEditing();
         inputModel.setRowCount(0);
-        for (PriorityScheduler.Job j : PrioritySample.withIdleGapAndTies()) {
-            inputModel.addRow(new Object[] {
-                    j.pid,
-                    String.valueOf(j.arrival),
-                    String.valueOf(j.burst),
-                    String.valueOf(j.priority)
-            });
-        }
+        // Sample: 5 processes all arriving at time 0
+        String[][] sample = { {"P1","0","10","3"}, {"P2","0","1","1"}, {"P3","0","2","4"}, {"P4","0","1","5"}, {"P5","0","5","2"} };
+        for (String[] row : sample)
+            inputModel.addRow(row);
     }
 
     private void resetAll() {

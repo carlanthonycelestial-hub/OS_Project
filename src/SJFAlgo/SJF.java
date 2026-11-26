@@ -223,8 +223,10 @@ public class SJF extends JPanel {
     private void loadSampleData() {
         stopEditing();
         inputModel.setRowCount(0);
-        for (SJFScheduler.Job j : SJFSample.staggeredArrivals())
-            inputModel.addRow(new Object[] { j.pid, String.valueOf(j.arrival), String.valueOf(j.burst) });
+        // Sample: 5 processes with staggered arrivals
+        String[][] sample = { {"P1","1","7"}, {"P2","3","3"}, {"P3","6","2"}, {"P4","7","10"}, {"P5","9","8"} };
+        for (String[] row : sample)
+            inputModel.addRow(row);
     }
 
     private void resetAll() {
