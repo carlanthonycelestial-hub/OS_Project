@@ -1,8 +1,7 @@
 package src.Gui;
 
 import javax.swing.*;
-
-import src.SJFAlgo.SJFScheduler;
+import src.Scheduler.CPUScheduler.Block;
 
 import java.awt.*;
 import java.awt.event.MouseEvent;
@@ -25,11 +24,11 @@ public final class GanttChartPanel extends JPanel {
 
     private static final int MARGIN = 20, TOP_Y = 10, BAR_HEIGHT = 32, LABEL_GAP = 6;
 
-    private List<SJFScheduler.Block> blocks = new ArrayList<>();
+    private List<Block> blocks = new ArrayList<>();
     private final String emptyMessage;
 
     public GanttChartPanel() {
-        this("Run 'Compute SJF' to generate the Gantt chart.");
+        this("Run compute to generate the Gantt chart.");
     }
 
     public GanttChartPanel(String emptyMessage) {
@@ -38,7 +37,7 @@ public final class GanttChartPanel extends JPanel {
         ToolTipManager.sharedInstance().registerComponent(this);
     }
 
-    public void setBlocks(List<SJFScheduler.Block> blocks) {
+    public void setBlocks(List<Block> blocks) {
         this.blocks = blocks;
         repaint();
     }
@@ -51,27 +50,15 @@ public final class GanttChartPanel extends JPanel {
     }
 
     @Override
-    public String getToolTipText(MouseEvent e) {
-        if (blocks.isEmpty() || e.getY() < TOP_Y || e.getY() > TOP_Y + BAR_HEIGHT)
-            return null;
-        for (SJFScheduler.Block b : blocks) {
-            if (e.getX() >= xAt(b.start) && e.getX() <= Math.max(xAt(b.end), xAt(b.start) + 1)) {
-                return b.label + ": " + b.start + " \u2192 " + b.end + "  (" + (b.end - b.start) + " units)";
-            }
-        }
-        return null;
-    }
-
-    @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         if (blocks.isEmpty()) {
-            g2.setColor(Color.GRAY);
             g2.setFont(EMPTY_FONT);
-            g2.drawString(emptyMessage, 20, 38);
+            g2.setColor(Color.GRAY);
+            g2.drawString(emptyMessage, MARGIN, TOP_Y + BAR_HEIGHT / 2 + 5);
             return;
         }
 
@@ -79,47 +66,71 @@ public final class GanttChartPanel extends JPanel {
         FontMetrics fm = g2.getFontMetrics();
         int colorIdx = 0;
 
-        for (SJFScheduler.Block b : blocks) {
+        for (Block b : blocks) {
             int x1 = xAt(b.start);
-            int width = Math.max(xAt(b.end) - x1, 1);
+            int x2 = xAt(b.end);
+            int width = Math.max(x2 - x1, 1);
 
-            g2.setColor(b.idle ? IDLE_FILL : PALETTE[colorIdx++ % PALETTE.length]);
-            g2.fillRect(x1, TOP_Y, width, BAR_HEIGHT);
-
-            int textWidth = fm.stringWidth(b.label);
-            if (width >= textWidth + 4) {
-                g2.setColor(b.idle ? IDLE_TEXT : Color.WHITE);
-                int textY = TOP_Y + (BAR_HEIGHT - fm.getHeight()) / 2 + fm.getAscent();
-                g2.drawString(b.label, x1 + (width - textWidth) / 2, textY);
+            if (b.idle) {
+                g2.setColor(IDLE_FILL);
+                g2.fillRect(x1, TOP_Y, width, BAR_HEIGHT);
+                g2.setColor(OUTLINE);
+                g2.drawRect(x1, TOP_Y, width, BAR_HEIGHT);
+                g2.setColor(IDLE_TEXT);
+            } else {
+                g2.setColor(PALETTE[colorIdx % PALETTE.length]);
+                colorIdx++;
+                g2.fillRect(x1, TOP_Y, width, BAR_HEIGHT);
+                g2.setColor(OUTLINE);
+                g2.drawRect(x1, TOP_Y, width, BAR_HEIGHT);
+                g2.setColor(Color.WHITE);
             }
 
-            g2.setColor(OUTLINE);
-            g2.drawRect(x1, TOP_Y, width, BAR_HEIGHT);
+            int sw = fm.stringWidth(b.label);
+            if (sw <= width - 4) {
+                int textX = x1 + (width - sw) / 2;
+                int textY = TOP_Y + (BAR_HEIGHT + fm.getAscent() - fm.getDescent()) / 2;
+                g2.drawString(b.label, textX, textY);
+            }
         }
-        drawTimeLabels(g2);
+
+        g2.setFont(TIME_FONT);
+        FontMetrics tfm = g2.getFontMetrics();
+        g2.setColor(OUTLINE);
+
+        int timeY = TOP_Y + BAR_HEIGHT + LABEL_GAP + tfm.getAscent();
+        for (int i = 0; i < blocks.size(); i++) {
+            Block b = blocks.get(i);
+            if (i == 0) {
+                drawTimeMark(g2, tfm, b.start, xAt(b.start), timeY);
+            }
+            drawTimeMark(g2, tfm, b.end, xAt(b.end), timeY);
+        }
     }
 
-    private void drawTimeLabels(Graphics2D g2) {
-        g2.setFont(TIME_FONT);
-        g2.setColor(OUTLINE);
-        FontMetrics fm = g2.getFontMetrics();
-        int y = TOP_Y + BAR_HEIGHT + 14;
+    private void drawTimeMark(Graphics2D g2, FontMetrics fm, int time, int x, int y) {
+        String str = String.valueOf(time);
+        int w = fm.stringWidth(str);
+        g2.drawString(str, x - w / 2, y);
+    }
 
-        int lastEnd = blocks.get(blocks.size() - 1).end;
-        String endStr = String.valueOf(lastEnd);
-        int endW = fm.stringWidth(endStr);
-        int endLeft = Math.min(getWidth() - endW - 4, xAt(lastEnd) - endW / 2);
+    @Override
+    public String getToolTipText(MouseEvent e) {
+        if (blocks.isEmpty())
+            return null;
+        int x = e.getX();
+        int y = e.getY();
+        if (y < TOP_Y || y > TOP_Y + BAR_HEIGHT)
+            return null;
 
-        int prevRight = Integer.MIN_VALUE / 2;
-        for (SJFScheduler.Block b : blocks) {
-            String s = String.valueOf(b.start);
-            int w = fm.stringWidth(s);
-            int left = Math.max(2, xAt(b.start) - w / 2);
-            if (left < prevRight + LABEL_GAP || left + w + LABEL_GAP > endLeft)
-                continue;
-            g2.drawString(s, left, y);
-            prevRight = left + w;
+        for (Block b : blocks) {
+            int x1 = xAt(b.start);
+            int x2 = xAt(b.end);
+            if (x >= x1 && x <= x2) {
+                int duration = b.end - b.start;
+                return String.format("%s [%d - %d] (duration: %d ms)", b.label, b.start, b.end, duration);
+            }
         }
-        g2.drawString(endStr, endLeft, y);
+        return null;
     }
 }

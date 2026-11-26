@@ -7,7 +7,8 @@ import javax.swing.table.DefaultTableModel;
 
 import src.Gui.GanttChartPanel;
 import src.Gui.MainApp;
-import src.SJFAlgo.SJFScheduler.Block;
+import src.Scheduler.CPUScheduler.Block;
+import src.Scheduler.CPUScheduler.Job;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -258,11 +259,11 @@ public class MultiLevel extends JPanel {
         stopEditing();
         try {
             int tq = parseQuantum();
-            List<MultiLevelScheduler.Job> jobs = readInputs();
+            List<Job> jobs = readInputs();
             List<Block> blocks = MultiLevelScheduler.schedule(jobs, tq);
 
             outputModel.setRowCount(0);
-            for (MultiLevelScheduler.Job j : jobs) {
+            for (Job j : jobs) {
                 outputModel.addRow(new Object[] {
                         j.pid,
                         "Q" + j.queue + (j.queue == 1 ? " (RR)" : " (FCFS)"),
@@ -304,12 +305,12 @@ public class MultiLevel extends JPanel {
         return v == null ? "" : v.toString().trim();
     }
 
-    private List<MultiLevelScheduler.Job> readInputs() throws InvalidInput {
+    private List<Job> readInputs() throws InvalidInput {
         int rows = inputModel.getRowCount();
         if (rows == 0 || rows > MAX_PROCESSES)
             throw new InvalidInput(-1, -1, "Number of processes must be between 1 and " + MAX_PROCESSES + ".");
 
-        List<MultiLevelScheduler.Job> jobs = new ArrayList<>();
+        List<Job> jobs = new ArrayList<>();
         Set<String> seen = new HashSet<>();
 
         for (int i = 0; i < rows; i++) {
@@ -330,7 +331,7 @@ public class MultiLevel extends JPanel {
             int bt = parsePos(cell(i, COL_BT), i, COL_BT, "Row " + (i + 1) + " Burst Time");
             int q = parseQueue(cell(i, COL_QUEUE), i, COL_QUEUE, "Row " + (i + 1) + " Queue");
 
-            jobs.add(new MultiLevelScheduler.Job(pid, at, bt, q, i));
+            jobs.add(new Job(pid, at, bt, 0, q, i));
         }
         return jobs;
     }

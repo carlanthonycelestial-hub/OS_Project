@@ -1,37 +1,21 @@
 package src.SJFAlgo;
 
+import src.Scheduler.CPUScheduler;
+import src.Scheduler.CPUScheduler.Block;
+import src.Scheduler.CPUScheduler.Job;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public final class SJFScheduler {
-    private SJFScheduler() {
-    }
+/**
+ * Non-preemptive Shortest Job First (SJF) Scheduler.
+ */
+public final class SJFScheduler implements CPUScheduler {
 
-    public static final class Job {
-        public final String pid;
-        public final int arrival, burst, index;
-        public int completion, turnaround, waiting;
-
-        public Job(String pid, int arrival, int burst, int index) {
-            this.pid = pid;
-            this.arrival = arrival;
-            this.burst = burst;
-            this.index = index;
-        }
-    }
-
-    public static final class Block {
-        public final String label;
-        public final int start, end;
-        public final boolean idle;
-
-        public Block(String label, int start, int end, boolean idle) {
-            this.label = label;
-            this.start = start;
-            this.end = end;
-            this.idle = idle;
-        }
+    @Override
+    public String name() {
+        return "SJF";
     }
 
     private static final Comparator<Job> SHORTEST_FIRST = Comparator.comparingInt((Job j) -> j.burst)
@@ -53,7 +37,7 @@ public final class SJFScheduler {
                 }
             }
 
-            if (next == null) { // nobody has arrived yet: CPU idles until the next arrival
+            if (next == null) {
                 blocks.add(new Block("IDLE", time, earliestArrival, true));
                 time = earliestArrival;
                 continue;
@@ -70,13 +54,6 @@ public final class SJFScheduler {
     }
 
     public static double[] averages(List<Job> jobs) {
-        double ct = 0, tat = 0, wt = 0;
-        for (Job j : jobs) {
-            ct += j.completion;
-            tat += j.turnaround;
-            wt += j.waiting;
-        }
-        int n = jobs.size();
-        return new double[] { ct / n, tat / n, wt / n };
+        return CPUScheduler.averages(jobs);
     }
 }

@@ -2,7 +2,8 @@ package src.PriorityAlgo;
 
 import src.Gui.GanttChartPanel;
 import src.Gui.MainApp;
-import src.SJFAlgo.SJFScheduler;
+import src.Scheduler.CPUScheduler.Block;
+import src.Scheduler.CPUScheduler.Job;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -243,11 +244,11 @@ public class Priority extends JPanel {
     private void runPriority() {
         stopEditing();
         try {
-            List<PriorityScheduler.Job> jobs = readJobs();
-            List<SJFScheduler.Block> blocks = PriorityScheduler.schedule(jobs);
+            List<Job> jobs = readJobs();
+            List<Block> blocks = PriorityScheduler.schedule(jobs);
 
             outputModel.setRowCount(0);
-            for (PriorityScheduler.Job j : jobs) {
+            for (Job j : jobs) {
                 outputModel.addRow(new Object[] {
                         j.pid, j.arrival, j.burst, j.priority, j.completion, j.turnaround, j.waiting
                 });
@@ -268,14 +269,14 @@ public class Priority extends JPanel {
         return value == null ? "" : value.toString().trim();
     }
 
-    private List<PriorityScheduler.Job> readJobs() throws InvalidInput {
+    private List<Job> readJobs() throws InvalidInput {
         int rows = inputModel.getRowCount();
         if (rows == 0)
             throw new InvalidInput(-1, -1, "Please add at least one process before computing.");
         if (rows > MAX_PROCESSES)
             throw new InvalidInput(-1, -1, "Too many processes. The maximum is " + MAX_PROCESSES + ".");
 
-        List<PriorityScheduler.Job> jobs = new ArrayList<>();
+        List<Job> jobs = new ArrayList<>();
         Set<String> seen = new HashSet<>();
 
         for (int i = 0; i < rows; i++) {
@@ -300,7 +301,7 @@ public class Priority extends JPanel {
             int arrival = parseField(i, COL_AT, where, "Arrival Time", 0);
             int burst = parseField(i, COL_BT, where, "Burst Time", 1);
             int priority = parseField(i, COL_PRIO, where, "Priority", 0);
-            jobs.add(new PriorityScheduler.Job(pid, arrival, burst, priority, i));
+            jobs.add(new Job(pid, arrival, burst, priority, i));
         }
         return jobs;
     }
