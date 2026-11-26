@@ -1,7 +1,17 @@
-package app;
+package src.Gui;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+
+import src.LookAlgo.Look;
+import src.LookAlgo.LookSample;
+import src.PriorityAlgo.Priority;
+import src.PriorityAlgo.PrioritySample;
+import src.SJFAlgo.SJF;
+import src.SJFAlgo.SJFSample;
+import src.ScanAlgo.Scan;
+import src.ScanAlgo.ScanSample;
+
 import java.awt.*;
 
 public class MainApp extends JFrame {
@@ -10,10 +20,14 @@ public class MainApp extends JFrame {
 
     public static final String MENU_CARD = "MENU";
     public static final String SJF_CARD = "SJF";
+    public static final String SJF_SAMPLE_CARD = "SJF_SAMPLE";
     public static final String MLQ_CARD = "MLQ";
     public static final String PRIORITY_CARD = "PRIORITY";
+    public static final String PRIORITY_SAMPLE_CARD = "PRIORITY_SAMPLE";
     public static final String SCAN_CARD = "SCAN";
+    public static final String SCAN_SAMPLE_CARD = "SCAN_SAMPLE";
     public static final String LOOK_CARD = "LOOK";
+    public static final String LOOK_SAMPLE_CARD = "LOOK_SAMPLE";
 
     public MainApp() {
         setTitle("OS Scheduling Simulator - CPU & Disk Scheduling");
@@ -27,11 +41,15 @@ public class MainApp extends JFrame {
 
         mainContainer.add(createMainMenuPanel(), MENU_CARD);
         mainContainer.add(new SJF(this), SJF_CARD);
+        mainContainer.add(new SJFSample(this), SJF_SAMPLE_CARD);
 
         mainContainer.add(new PlaceholderPanel(this, "Multilevel Queue Scheduling"), MLQ_CARD);
         mainContainer.add(new Priority(this), PRIORITY_CARD);
-        mainContainer.add(new PlaceholderPanel(this, "SCAN Disk Scheduling"), SCAN_CARD);
-        mainContainer.add(new PlaceholderPanel(this, "LOOK Disk Scheduling"), LOOK_CARD);
+        mainContainer.add(new PrioritySample(this), PRIORITY_SAMPLE_CARD);
+        mainContainer.add(new Scan(this), SCAN_CARD);
+        mainContainer.add(new ScanSample(this), SCAN_SAMPLE_CARD);
+        mainContainer.add(new Look(this), LOOK_CARD);
+        mainContainer.add(new LookSample(this), LOOK_SAMPLE_CARD);
 
         add(mainContainer);
         showCard(MENU_CARD);
@@ -78,7 +96,53 @@ public class MainApp extends JFrame {
 
         groupsPanel.add(cpuPanel);
         groupsPanel.add(diskPanel);
-        wrapper.add(groupsPanel, BorderLayout.CENTER);
+
+        JPanel sampleCard = new JPanel();
+        sampleCard.setLayout(new BoxLayout(sampleCard, BoxLayout.Y_AXIS));
+        sampleCard.setBackground(Color.WHITE);
+        sampleCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(203, 213, 225), 1, true),
+                new EmptyBorder(18, 25, 18, 25)));
+
+        JLabel sampleTitle = new JLabel("Sample");
+        sampleTitle.setFont(new Font("SansSerif", Font.BOLD, 18));
+        sampleTitle.setForeground(new Color(15, 23, 42));
+        sampleTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        sampleCard.add(sampleTitle);
+        sampleCard.add(Box.createVerticalStrut(16));
+
+        String[][] algorithms = {
+                { "Shortest Job First (SJF)", SJF_SAMPLE_CARD },
+                { "Multilevel Queue", MLQ_CARD },
+                { "Priority (Preemptive)", PRIORITY_SAMPLE_CARD },
+                { "SCAN", SCAN_SAMPLE_CARD },
+                { "LOOK", LOOK_SAMPLE_CARD }
+        };
+        for (int i = 0; i < algorithms.length; i++) {
+            JButton b = createMenuButton(algorithms[i][0], algorithms[i][1], false);
+            b.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+            b.setPreferredSize(new Dimension(260, 42));
+            sampleCard.add(b);
+            if (i < algorithms.length - 1)
+                sampleCard.add(Box.createVerticalStrut(10));
+        }
+        sampleCard.add(Box.createVerticalGlue());
+
+        JPanel sampleTabPanel = new JPanel(new GridBagLayout());
+        sampleTabPanel.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
+        gbc.insets = new Insets(10, 120, 10, 120);
+        sampleTabPanel.add(sampleCard, gbc);
+
+        groupsPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("SansSerif", Font.BOLD, 14));
+        tabbedPane.addTab("Main", groupsPanel);
+        tabbedPane.addTab("Sample", sampleTabPanel);
+        wrapper.add(tabbedPane, BorderLayout.CENTER);
 
         JPanel footerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         footerPanel.setOpaque(false);
@@ -148,17 +212,14 @@ public class MainApp extends JFrame {
     }
 
     private void showAboutDialog() {
-        String aboutMessage = """
-                OS CPU & Disk Scheduling Simulator
-
-                Group Number: [Insert Group Number]
-
-                Group Members:
-                • [Member 1 Zach] - Shortest Job First (SJF)
-                • [Member 2 Roman] - Multilevel Queue
-                • [Member 3 Kent] - Priority (Preemptive)
-                • [Member 4 Pierre & Carl] - SCAN & LOOK Disk Scheduling
-                """;
+        String aboutMessage = "OS CPU & Disk Scheduling Simulator\n\n"
+                + "Group Number: [Insert Group Number]\n\n"
+                + "Group Members:\n"
+                + "\u2022 [Member 1 Zach] - Shortest Job First (SJF)\n"
+                + "\u2022 [Member 2 Roman] - Multilevel Queue\n"
+                + "\u2022 [Member 3 Kent] - Priority (Preemptive)\n"
+                + "\u2022 [Member 4 Pierre] - SCAN Disk Scheduling\n"
+                + "\u2022 [Member 5 Carl] - LOOK Disk Scheduling";
         JOptionPane.showMessageDialog(this, aboutMessage, "About Group Project", JOptionPane.INFORMATION_MESSAGE);
     }
 

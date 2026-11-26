@@ -1,7 +1,8 @@
-package app;
+package src.Gui;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+
 import java.awt.*;
 
 public class PlaceholderPanel extends JPanel {
@@ -13,7 +14,7 @@ public class PlaceholderPanel extends JPanel {
         JPanel topBar = new JPanel(new BorderLayout());
         topBar.setOpaque(false);
 
-        JButton backBtn = new JButton("← Back to Main Menu");
+        JButton backBtn = new JButton("\u2190 Back to Main Menu");
         backBtn.setFont(new Font("SansSerif", Font.BOLD, 13));
         backBtn.addActionListener(e -> mainApp.showCard(MainApp.MENU_CARD));
 

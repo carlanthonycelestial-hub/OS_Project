@@ -1,36 +1,39 @@
-package app;
+package src.SJFAlgo;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
+
+import src.Gui.GanttChartPanel;
+import src.Gui.MainApp;
+
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class Priority extends JPanel {
+public class SJF extends JPanel {
     private static final int MAX_PROCESSES = 20;
     private static final int MAX_TIME = 10000;
     private static final int DEFAULT_ROWS = 5;
-    private static final int COL_PID = 0, COL_AT = 1, COL_BT = 2, COL_PRIO = 3;
+    private static final int COL_PID = 0, COL_AT = 1, COL_BT = 2;
     private static final Font BOLD_13 = new Font("SansSerif", Font.BOLD, 13);
-    private static final String[] AVG_NAMES = {"Completion", "Turnaround", "Waiting"};
+    private static final String[] AVG_NAMES = { "Completion", "Turnaround", "Waiting" };
 
-    private final DefaultTableModel inputModel =
-            new DefaultTableModel(new String[]{"PID", "Arrival Time", "Burst Time", "Priority (Lower = Higher)"}, 0);
-    private final DefaultTableModel outputModel =
-            new DefaultTableModel(new String[]{"PID", "AT", "BT", "PRIO", "CT", "TAT", "WT"}, 0) {
-                @Override
-                public boolean isCellEditable(int row, int column) {
-                    return false;
-                }
-            };
+    private final DefaultTableModel inputModel = new DefaultTableModel(
+            new String[] { "PID", "Arrival Time", "Burst Time" }, 0);
+    private final DefaultTableModel outputModel = new DefaultTableModel(
+            new String[] { "PID", "AT", "BT", "CT", "TAT", "WT" }, 0) {
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return false;
+        }
+    };
     private final JTable inputTable = new JTable(inputModel);
-    private final GanttChartPanel gantt =
-            new GanttChartPanel("Run 'Compute Priority' to generate the Gantt chart.");
-    private final JLabel[] avgLabels = {new JLabel(), new JLabel(), new JLabel()};
+    private final GanttChartPanel gantt = new GanttChartPanel();
+    private final JLabel[] avgLabels = { new JLabel(), new JLabel(), new JLabel() };
 
     private static final class InvalidInput extends Exception {
         final int row, col;
@@ -42,12 +45,12 @@ public class Priority extends JPanel {
         }
     }
 
-    public Priority(MainApp mainApp) {
+    public SJF(MainApp mainApp) {
         setLayout(new BorderLayout(12, 12));
         setBorder(new EmptyBorder(15, 20, 15, 20));
         setBackground(new Color(248, 250, 252));
 
-        JLabel header = new JLabel("Priority Scheduling - Preemptive", SwingConstants.CENTER);
+        JLabel header = new JLabel("Shortest Job First (SJF) - Non-Preemptive", SwingConstants.CENTER);
         header.setFont(new Font("SansSerif", Font.BOLD, 20));
         header.setForeground(new Color(15, 23, 42));
         JPanel topBar = new JPanel(new BorderLayout());
@@ -60,19 +63,18 @@ public class Priority extends JPanel {
         inputTable.putClientProperty("terminateEditOnFocusLost", Boolean.TRUE);
         addRows(DEFAULT_ROWS);
 
-        JPanel rowButtons = flowPanel(4, 4,
+        JPanel rowButtons = flowPanel(8, 2,
                 button("+ Add Process", this::addSingleRow),
                 button("- Remove Selected", this::removeSelectedRow),
                 button("Add Multiple", this::promptAddMultipleRows));
-        JButton computeBtn = button("Compute Priority", this::runPriority);
+        JButton computeBtn = button("Compute SJF", this::runSJF);
         computeBtn.setBackground(new Color(37, 99, 235));
         computeBtn.setForeground(Color.WHITE);
-        JPanel actionButtons = flowPanel(4, 4,
+        JPanel actionButtons = flowPanel(10, 4,
                 button("Load Sample Data", this::loadSampleData),
                 button("Reset / Clear", this::resetAll),
                 computeBtn);
-        JPanel controls = new JPanel();
-        controls.setLayout(new BoxLayout(controls, BoxLayout.Y_AXIS));
+        JPanel controls = new JPanel(new GridLayout(2, 1, 5, 5));
         controls.setOpaque(false);
         controls.add(rowButtons);
         controls.add(actionButtons);
@@ -111,7 +113,6 @@ public class Priority extends JPanel {
     private static JButton button(String text, Runnable action) {
         JButton b = new JButton(text);
         b.setFont(BOLD_13);
-        b.setMargin(new Insets(4, 6, 4, 6));
         b.addActionListener(e -> action.run());
         return b;
     }
@@ -119,7 +120,8 @@ public class Priority extends JPanel {
     private static JPanel flowPanel(int hgap, int vgap, JComponent... items) {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, hgap, vgap));
         p.setOpaque(false);
-        for (JComponent c : items) p.add(c);
+        for (JComponent c : items)
+            p.add(c);
         return p;
     }
 
@@ -144,7 +146,8 @@ public class Priority extends JPanel {
     }
 
     private void stopEditing() {
-        if (inputTable.isEditing()) inputTable.getCellEditor().stopCellEditing();
+        if (inputTable.isEditing())
+            inputTable.getCellEditor().stopCellEditing();
     }
 
     private void selectCell(int row, int col) {
@@ -156,13 +159,15 @@ public class Priority extends JPanel {
         int max = 0;
         for (int i = 0; i < inputModel.getRowCount(); i++) {
             String pid = cell(i, COL_PID);
-            if (pid.matches("^[Pp]\\d{1,9}$")) max = Math.max(max, Integer.parseInt(pid.substring(1)));
+            if (pid.matches("^[Pp]\\d{1,9}$"))
+                max = Math.max(max, Integer.parseInt(pid.substring(1)));
         }
         return max + 1;
     }
 
     private void addRows(int count) {
-        for (int i = 0; i < count; i++) inputModel.addRow(new Object[]{"P" + nextPidNumber(), "", "", ""});
+        for (int i = 0; i < count; i++)
+            inputModel.addRow(new Object[] { "P" + nextPidNumber(), "", "" });
     }
 
     private void addSingleRow() {
@@ -198,7 +203,8 @@ public class Priority extends JPanel {
         String input = JOptionPane.showInputDialog(this,
                 "How many processes would you like to add? (up to " + remaining + " more)",
                 "Add Multiple Processes", JOptionPane.QUESTION_MESSAGE);
-        if (input == null) return;
+        if (input == null)
+            return;
 
         try {
             int count = Integer.parseInt(input.trim());
@@ -217,14 +223,8 @@ public class Priority extends JPanel {
     private void loadSampleData() {
         stopEditing();
         inputModel.setRowCount(0);
-        String[][] sample = {
-                {"P1", "0", "7", "3"},
-                {"P2", "2", "4", "1"},
-                {"P3", "4", "1", "2"},
-                {"P4", "5", "4", "4"},
-                {"P5", "6", "2", "1"}
-        };
-        for (String[] row : sample) inputModel.addRow(row);
+        for (SJFScheduler.Job j : SJFSample.staggeredArrivals())
+            inputModel.addRow(new Object[] { j.pid, String.valueOf(j.arrival), String.valueOf(j.burst) });
     }
 
     private void resetAll() {
@@ -236,19 +236,17 @@ public class Priority extends JPanel {
         showAverages(null);
     }
 
-    private void runPriority() {
+    private void runSJF() {
         stopEditing();
         try {
-            List<PriorityScheduler.Job> jobs = readJobs();
-            List<SJFScheduler.Block> blocks = PriorityScheduler.schedule(jobs);
+            List<SJFScheduler.Job> jobs = readJobs();
+            List<SJFScheduler.Block> blocks = SJFScheduler.schedule(jobs);
 
             outputModel.setRowCount(0);
-            for (PriorityScheduler.Job j : jobs) {
-                outputModel.addRow(new Object[]{
-                        j.pid, j.arrival, j.burst, j.priority, j.completion, j.turnaround, j.waiting
-                });
+            for (SJFScheduler.Job j : jobs) {
+                outputModel.addRow(new Object[] { j.pid, j.arrival, j.burst, j.completion, j.turnaround, j.waiting });
             }
-            showAverages(PriorityScheduler.averages(jobs));
+            showAverages(SJFScheduler.averages(jobs));
             gantt.setBlocks(blocks);
         } catch (InvalidInput ex) {
             if (ex.row >= 0) {
@@ -264,19 +262,22 @@ public class Priority extends JPanel {
         return value == null ? "" : value.toString().trim();
     }
 
-    private List<PriorityScheduler.Job> readJobs() throws InvalidInput {
+    private List<SJFScheduler.Job> readJobs() throws InvalidInput {
         int rows = inputModel.getRowCount();
-        if (rows == 0) throw new InvalidInput(-1, -1, "Please add at least one process before computing.");
-        if (rows > MAX_PROCESSES) throw new InvalidInput(-1, -1, "Too many processes. The maximum is " + MAX_PROCESSES + ".");
+        if (rows == 0)
+            throw new InvalidInput(-1, -1, "Please add at least one process before computing.");
+        if (rows > MAX_PROCESSES)
+            throw new InvalidInput(-1, -1, "Too many processes. The maximum is " + MAX_PROCESSES + ".");
 
-        List<PriorityScheduler.Job> jobs = new ArrayList<>();
+        List<SJFScheduler.Job> jobs = new ArrayList<>();
         Set<String> seen = new HashSet<>();
 
         for (int i = 0; i < rows; i++) {
             String pid = cell(i, COL_PID);
             String where = "Row " + (i + 1) + (pid.isEmpty() ? "" : " (" + pid + ")");
 
-            if (pid.isEmpty()) throw new InvalidInput(i, COL_PID, where + ": PID is empty.");
+            if (pid.isEmpty())
+                throw new InvalidInput(i, COL_PID, where + ": PID is empty.");
             if (!pid.matches("^[Pp]\\d+$")) {
                 throw new InvalidInput(i, COL_PID, "Invalid PID '" + pid + "' at row " + (i + 1)
                         + ". PID must be the letter P followed only by numbers (e.g., P1, P2).");
@@ -292,8 +293,7 @@ public class Priority extends JPanel {
 
             int arrival = parseField(i, COL_AT, where, "Arrival Time", 0);
             int burst = parseField(i, COL_BT, where, "Burst Time", 1);
-            int priority = parseField(i, COL_PRIO, where, "Priority", 0);
-            jobs.add(new PriorityScheduler.Job(pid, arrival, burst, priority, i));
+            jobs.add(new SJFScheduler.Job(pid, arrival, burst, i));
         }
         return jobs;
     }
@@ -301,10 +301,12 @@ public class Priority extends JPanel {
     private int parseField(int row, int col, String where, String name, int min) throws InvalidInput {
         String text = cell(row, col);
         String range = "a whole number between " + min + " and " + MAX_TIME;
-        if (text.isEmpty()) throw new InvalidInput(row, col, where + ": " + name + " is empty.");
+        if (text.isEmpty())
+            throw new InvalidInput(row, col, where + ": " + name + " is empty.");
         try {
             int value = Integer.parseInt(text);
-            if (value >= min && value <= MAX_TIME) return value;
+            if (value >= min && value <= MAX_TIME)
+                return value;
         } catch (NumberFormatException ignored) {
         }
         throw new InvalidInput(row, col, where + ": " + name + " must be " + range + ".");

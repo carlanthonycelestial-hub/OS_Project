@@ -1,12 +1,15 @@
-package app;
+package src.Gui;
 
 import javax.swing.*;
+
+import src.SJFAlgo.SJFScheduler;
+
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
-final class GanttChartPanel extends JPanel {
+public final class GanttChartPanel extends JPanel {
     private static final Color[] PALETTE = {
             new Color(59, 130, 246), new Color(16, 185, 129), new Color(245, 158, 11),
             new Color(139, 92, 246), new Color(236, 72, 153), new Color(20, 184, 166),
@@ -25,17 +28,17 @@ final class GanttChartPanel extends JPanel {
     private List<SJFScheduler.Block> blocks = new ArrayList<>();
     private final String emptyMessage;
 
-    GanttChartPanel() {
+    public GanttChartPanel() {
         this("Run 'Compute SJF' to generate the Gantt chart.");
     }
 
-    GanttChartPanel(String emptyMessage) {
+    public GanttChartPanel(String emptyMessage) {
         this.emptyMessage = emptyMessage;
         setBackground(Color.WHITE);
         ToolTipManager.sharedInstance().registerComponent(this);
     }
 
-    void setBlocks(List<SJFScheduler.Block> blocks) {
+    public void setBlocks(List<SJFScheduler.Block> blocks) {
         this.blocks = blocks;
         repaint();
     }
@@ -49,7 +52,8 @@ final class GanttChartPanel extends JPanel {
 
     @Override
     public String getToolTipText(MouseEvent e) {
-        if (blocks.isEmpty() || e.getY() < TOP_Y || e.getY() > TOP_Y + BAR_HEIGHT) return null;
+        if (blocks.isEmpty() || e.getY() < TOP_Y || e.getY() > TOP_Y + BAR_HEIGHT)
+            return null;
         for (SJFScheduler.Block b : blocks) {
             if (e.getX() >= xAt(b.start) && e.getX() <= Math.max(xAt(b.end), xAt(b.start) + 1)) {
                 return b.label + ": " + b.start + " \u2192 " + b.end + "  (" + (b.end - b.start) + " units)";
@@ -111,7 +115,8 @@ final class GanttChartPanel extends JPanel {
             String s = String.valueOf(b.start);
             int w = fm.stringWidth(s);
             int left = Math.max(2, xAt(b.start) - w / 2);
-            if (left < prevRight + LABEL_GAP || left + w + LABEL_GAP > endLeft) continue;
+            if (left < prevRight + LABEL_GAP || left + w + LABEL_GAP > endLeft)
+                continue;
             g2.drawString(s, left, y);
             prevRight = left + w;
         }

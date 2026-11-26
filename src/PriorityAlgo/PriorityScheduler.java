@@ -1,11 +1,14 @@
-package app;
+package src.PriorityAlgo;
+
+import src.SJFAlgo.SJFScheduler;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 public final class PriorityScheduler {
-    private PriorityScheduler() {}
+    private PriorityScheduler() {
+    }
 
     public static final class Job {
         public final String pid;
@@ -22,10 +25,9 @@ public final class PriorityScheduler {
         }
     }
 
-    private static final Comparator<Job> HIGHER_PRIORITY =
-            Comparator.comparingInt((Job j) -> j.priority)
-                    .thenComparingInt(j -> j.arrival)
-                    .thenComparingInt(j -> j.index);
+    private static final Comparator<Job> HIGHER_PRIORITY = Comparator.comparingInt((Job j) -> j.priority)
+            .thenComparingInt(j -> j.arrival)
+            .thenComparingInt(j -> j.index);
 
     public static List<SJFScheduler.Block> schedule(List<Job> jobs) {
         List<SJFScheduler.Block> blocks = new ArrayList<>();
@@ -37,9 +39,11 @@ public final class PriorityScheduler {
             Job best = null;
             int nextArrival = Integer.MAX_VALUE;
             for (Job j : jobs) {
-                if (j.remaining == 0) continue;
+                if (j.remaining == 0)
+                    continue;
                 if (j.arrival <= time) {
-                    if (best == null || HIGHER_PRIORITY.compare(j, best) < 0) best = j;
+                    if (best == null || HIGHER_PRIORITY.compare(j, best) < 0)
+                        best = j;
                 } else {
                     nextArrival = Math.min(nextArrival, j.arrival);
                 }
@@ -67,7 +71,8 @@ public final class PriorityScheduler {
     }
 
     private static void appendBlock(List<SJFScheduler.Block> blocks, String label, int start, int end, boolean idle) {
-        if (start >= end) return;
+        if (start >= end)
+            return;
         if (!blocks.isEmpty()) {
             SJFScheduler.Block last = blocks.get(blocks.size() - 1);
             if (last.idle == idle && last.label.equals(label) && last.end == start) {
@@ -86,6 +91,6 @@ public final class PriorityScheduler {
             wt += j.waiting;
         }
         int n = jobs.size();
-        return new double[]{ct / n, tat / n, wt / n};
+        return new double[] { ct / n, tat / n, wt / n };
     }
 }

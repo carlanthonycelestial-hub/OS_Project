@@ -1,11 +1,12 @@
-package app;
+package src.SJFAlgo;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 public final class SJFScheduler {
-    private SJFScheduler() {}
+    private SJFScheduler() {
+    }
 
     public static final class Job {
         public final String pid;
@@ -33,10 +34,9 @@ public final class SJFScheduler {
         }
     }
 
-    private static final Comparator<Job> SHORTEST_FIRST =
-            Comparator.comparingInt((Job j) -> j.burst)
-                    .thenComparingInt(j -> j.arrival)
-                    .thenComparingInt(j -> j.index);
+    private static final Comparator<Job> SHORTEST_FIRST = Comparator.comparingInt((Job j) -> j.burst)
+            .thenComparingInt(j -> j.arrival)
+            .thenComparingInt(j -> j.index);
 
     public static List<Block> schedule(List<Job> jobs) {
         List<Block> blocks = new ArrayList<>();
@@ -77,6 +77,6 @@ public final class SJFScheduler {
             wt += j.waiting;
         }
         int n = jobs.size();
-        return new double[]{ct / n, tat / n, wt / n};
+        return new double[] { ct / n, tat / n, wt / n };
     }
 }
