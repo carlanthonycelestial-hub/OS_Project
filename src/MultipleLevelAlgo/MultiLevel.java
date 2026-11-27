@@ -2,42 +2,46 @@ package src.MultipleLevelAlgo;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 
 import src.Gui.GanttChartPanel;
 import src.Gui.MainApp;
-import src.Scheduler.CPUScheduler.Block;
+import src.MultipleLevelAlgo.MultiLevelScheduler.Result;
 import src.Scheduler.CPUScheduler.Job;
 
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
+/** Multilevel Queue screen: Queue 1 = Round Robin, Queue 2 = FCFS. */
 public class MultiLevel extends JPanel {
-    private static final int MAX_PROCESSES = 20;
-    private static final int MAX_TIME = 10000;
-    private static final int DEFAULT_ROWS = 5;
-    private static final int COL_PID = 0, COL_AT = 1, COL_BT = 2, COL_QUEUE = 3;
-    private static final Font BOLD_13 = new Font("SansSerif", Font.BOLD, 13);
-    private static final String[] AVG_NAMES = { "Completion", "Turnaround", "Waiting" };
+    private static final int MAX_PROCESSES = 20, MAX_TIME = 10000, DEFAULT_ROWS = 5;
+    private static final int COL_AT = 1, COL_BT = 2, COL_QUEUE = 3;
+    private static final Font BOLD = new Font("SansSerif", Font.BOLD, 13);
+    private static final String[] STAT_NAMES = { "Avg. Completion Time", "Avg. Turnaround Time",
+            "Avg. Waiting Time", "Avg. Response Time", "CPU Utilization", "Throughput" };
 
     private final DefaultTableModel inputModel = new DefaultTableModel(
-            new String[] { "PID", "Arrival Time", "Burst Time", "Queue (1=RR, 2=FCFS)" }, 0);
-    private final DefaultTableModel outputModel = new DefaultTableModel(
-            new String[] { "PID", "Queue", "AT", "BT", "CT", "TAT", "WT" }, 0) {
+            new String[] { "PID", "Arrival Time", "Burst Time", "Queue (1=RR, 2=FCFS)" }, 0) {
         @Override
-        public boolean isCellEditable(int row, int column) {
+        public boolean isCellEditable(int row, int col) {
+            return col != 0; // PID is auto-generated
+        }
+    };
+    private final DefaultTableModel outputModel = new DefaultTableModel(
+            new String[] { "PID", "Queue", "AT", "BT", "CT", "TAT", "WT", "RT" }, 0) {
+        @Override
+        public boolean isCellEditable(int row, int col) {
             return false;
         }
     };
     private final JTable inputTable = new JTable(inputModel);
+    private final JSpinner countSpinner = new JSpinner(new SpinnerNumberModel(DEFAULT_ROWS, 1, MAX_PROCESSES, 1));
     private final JTextField quantumField = new JTextField("4", 4);
     private final GanttChartPanel gantt = new GanttChartPanel("Run 'Compute MLQ' to generate the Gantt chart.");
-    private final JLabel[] avgLabels = { new JLabel(), new JLabel(), new JLabel() };
+    private final JLabel[] statLabels = new JLabel[STAT_NAMES.length];
 
+    /** Validation failure; row = -1 means the quantum field. */
     private static final class InvalidInput extends Exception {
         final int row, col;
 
@@ -51,109 +55,98 @@ public class MultiLevel extends JPanel {
     public MultiLevel(MainApp mainApp) {
         setLayout(new BorderLayout(12, 12));
         setBorder(new EmptyBorder(15, 20, 15, 20));
-        setBackground(new Color(248, 250, 252));
 
-        JLabel header = new JLabel("Multilevel Queue (MLQ) CPU Scheduling", SwingConstants.CENTER);
-        header.setFont(new Font("SansSerif", Font.BOLD, 20));
-        header.setForeground(new Color(15, 23, 42));
-        JPanel topBar = new JPanel(new BorderLayout());
-        topBar.setOpaque(false);
-        topBar.add(button("\u2190 Back to Main Menu", () -> mainApp.showCard(MainApp.MENU_CARD)), BorderLayout.WEST);
-        topBar.add(header, BorderLayout.CENTER);
-        add(topBar, BorderLayout.NORTH);
+        // ---- top bar ----
+        JLabel title = new JLabel("Multilevel Queue (MLQ) CPU Scheduling", SwingConstants.CENTER);
+        title.setFont(new Font("SansSerif", Font.BOLD, 20));
+        JPanel top = new JPanel(new BorderLayout());
+        top.add(button("\u2190 Back to Main Menu", () -> mainApp.showCard(MainApp.MENU_CARD)), BorderLayout.WEST);
+        top.add(title, BorderLayout.CENTER);
+        add(top, BorderLayout.NORTH);
 
+        // ---- left: input ----
         inputTable.setRowHeight(25);
         inputTable.putClientProperty("terminateEditOnFocusLost", Boolean.TRUE);
-        addRows(DEFAULT_ROWS);
+        // The queue can only be 1 or 2, so offer a drop-down instead of free text.
+        inputTable.getColumnModel().getColumn(COL_QUEUE)
+                .setCellEditor(new DefaultCellEditor(new JComboBox<>(new String[] { "1", "2" })));
+        countSpinner.addChangeListener(e -> syncRows());
+        syncRows();
 
-        JPanel quantumBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
-        quantumBar.setOpaque(false);
-        JLabel qLbl = new JLabel("Q1 (RR) Time Quantum: ");
-        qLbl.setFont(BOLD_13);
-        quantumBar.add(qLbl);
-        quantumBar.add(quantumField);
+        JPanel settings = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+        settings.add(new JLabel("No. of processes:"));
+        settings.add(countSpinner);
+        settings.add(new JLabel("   Q1 (RR) Time Quantum:"));
+        settings.add(quantumField);
 
-        JPanel rowButtons = flowPanel(8, 2,
-                button("+ Add Process", this::addSingleRow),
-                button("- Remove Selected", this::removeSelectedRow),
-                button("Add Multiple", this::promptAddMultipleRows));
-        JButton computeBtn = button("Compute MLQ", this::runMultiLevel);
-        computeBtn.setBackground(new Color(37, 99, 235));
-        computeBtn.setForeground(Color.WHITE);
-        JPanel actionButtons = flowPanel(10, 4,
-                button("Load Sample Data", this::loadSampleData),
-                button("Reset / Clear", this::resetAll),
-                computeBtn);
-        JPanel controls = new JPanel(new GridLayout(3, 1, 4, 4));
-        controls.setOpaque(false);
-        controls.add(quantumBar);
-        controls.add(rowButtons);
-        controls.add(actionButtons);
+        JButton compute = button("Compute MLQ", this::runMultiLevel);
+        compute.setBackground(new Color(37, 99, 235));
+        compute.setForeground(Color.WHITE);
+        quantumField.addActionListener(e -> runMultiLevel()); // Enter in the quantum field runs it
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 4));
+        actions.add(button("Load Sample Data", this::loadSampleData));
+        actions.add(button("Reset / Clear", this::resetAll));
+        actions.add(compute);
 
-        JPanel left = titledPanel("1. Process Input (max " + MAX_PROCESSES + ")");
+        JPanel controls = new JPanel(new GridLayout(2, 1));
+        controls.add(settings);
+        controls.add(actions);
+
+        JPanel left = new JPanel(new BorderLayout(8, 8));
+        left.setBorder(BorderFactory.createTitledBorder("1. Process Input (max " + MAX_PROCESSES + ")"));
         left.add(new JScrollPane(inputTable), BorderLayout.CENTER);
         left.add(controls, BorderLayout.SOUTH);
 
+        // ---- right: results ----
         JTable outputTable = new JTable(outputModel);
         outputTable.setRowHeight(25);
-        JPanel stats = new JPanel(new GridLayout(3, 1, 6, 6));
-        stats.setBackground(new Color(241, 245, 249));
-        stats.setBorder(new EmptyBorder(10, 12, 10, 12));
-        for (JLabel label : avgLabels) {
-            label.setFont(BOLD_13);
-            stats.add(label);
+        JPanel stats = new JPanel(new GridLayout(3, 2, 10, 6));
+        stats.setBorder(new EmptyBorder(8, 10, 8, 10));
+        for (int i = 0; i < statLabels.length; i++) {
+            statLabels[i] = new JLabel();
+            statLabels[i].setFont(BOLD);
+            stats.add(statLabels[i]);
         }
-        showAverages(null);
+        showStats(null);
 
-        JPanel right = titledPanel("2. Process Metrics Table");
+        JPanel right = new JPanel(new BorderLayout(8, 8));
+        right.setBorder(BorderFactory.createTitledBorder("2. Process Metrics Table"));
         right.add(new JScrollPane(outputTable), BorderLayout.CENTER);
         right.add(stats, BorderLayout.SOUTH);
 
         JPanel center = new JPanel(new GridLayout(1, 2, 15, 0));
-        center.setOpaque(false);
         center.add(left);
         center.add(right);
         add(center, BorderLayout.CENTER);
 
-        JPanel bottom = titledPanel("3. Gantt Chart (Time Scale)");
+        // ---- bottom: Gantt ----
+        JPanel bottom = new JPanel(new BorderLayout());
+        bottom.setBorder(BorderFactory.createTitledBorder("3. Gantt Chart (Time Scale)"));
         bottom.setPreferredSize(new Dimension(0, 98));
         bottom.add(gantt, BorderLayout.CENTER);
         add(bottom, BorderLayout.SOUTH);
     }
 
+    // ---------- small UI helpers ----------
+
     private static JButton button(String text, Runnable action) {
         JButton b = new JButton(text);
-        b.setFont(BOLD_13);
+        b.setFont(BOLD);
         b.addActionListener(e -> action.run());
         return b;
-    }
-
-    private static JPanel flowPanel(int hgap, int vgap, JComponent... items) {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, hgap, vgap));
-        p.setOpaque(false);
-        for (JComponent c : items)
-            p.add(c);
-        return p;
-    }
-
-    private static JPanel titledPanel(String title) {
-        JPanel p = new JPanel(new BorderLayout(8, 8));
-        p.setBackground(Color.WHITE);
-        p.setBorder(BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(new Color(203, 213, 225)),
-                title, TitledBorder.LEFT, TitledBorder.TOP, BOLD_13));
-        return p;
     }
 
     private void showError(String message) {
         JOptionPane.showMessageDialog(this, message, "Input Validation Error", JOptionPane.ERROR_MESSAGE);
     }
 
-    private void showAverages(double[] avg) {
-        for (int i = 0; i < avgLabels.length; i++) {
-            avgLabels[i].setText("Average " + AVG_NAMES[i] + " Time: "
-                    + (avg == null ? "-" : String.format("%.2f", avg[i])) + "ms");
-        }
+    private void showStats(Result r) {
+        String[] values = r == null ? new String[STAT_NAMES.length] : new String[] {
+                String.format("%.2f ms", r.avgCompletion), String.format("%.2f ms", r.avgTurnaround),
+                String.format("%.2f ms", r.avgWaiting), String.format("%.2f ms", r.avgResponse),
+                String.format("%.2f %%", r.utilization), String.format("%.4f proc/ms", r.throughput) };
+        for (int i = 0; i < statLabels.length; i++)
+            statLabels[i].setText(STAT_NAMES[i] + ": " + (values[i] == null ? "-" : values[i]));
     }
 
     private void stopEditing() {
@@ -161,125 +154,60 @@ public class MultiLevel extends JPanel {
             inputTable.getCellEditor().stopCellEditing();
     }
 
-    private void selectCell(int row, int col) {
-        inputTable.changeSelection(row, col, false, false);
-        inputTable.scrollRectToVisible(inputTable.getCellRect(row, col, true));
-    }
-
-    private int nextPidNumber() {
-        int max = 0;
-        for (int i = 0; i < inputModel.getRowCount(); i++) {
-            String pid = cell(i, COL_PID);
-            if (pid.matches("^[Pp]\\d{1,9}$"))
-                max = Math.max(max, Integer.parseInt(pid.substring(1)));
-        }
-        return max + 1;
-    }
-
-    private void addRows(int count) {
-        int start = nextPidNumber();
-        for (int i = 0; i < count; i++) {
-            inputModel.addRow(new Object[] { "P" + (start + i), "", "", "1" });
-        }
-    }
-
-    private void addSingleRow() {
+    /** Makes the table have exactly as many rows as the spinner says (existing rows are kept). */
+    private void syncRows() {
         stopEditing();
-        if (inputModel.getRowCount() >= MAX_PROCESSES) {
-            showError("The maximum number of processes is " + MAX_PROCESSES + ".");
-            return;
-        }
-        addRows(1);
-        selectCell(inputModel.getRowCount() - 1, COL_PID);
-    }
-
-    private void removeSelectedRow() {
-        stopEditing();
-        int row = inputTable.getSelectedRow();
-        if (row == -1) {
-            showError("Please select a row in the table first.");
-            return;
-        }
-        inputModel.removeRow(row);
-    }
-
-    private void promptAddMultipleRows() {
-        stopEditing();
-        int remaining = MAX_PROCESSES - inputModel.getRowCount();
-        if (remaining <= 0) {
-            addSingleRow();
-            return;
-        }
-        String in = JOptionPane.showInputDialog(this,
-                "How many processes would you like to add? (1-" + remaining + ")",
-                "Add Multiple Processes", JOptionPane.QUESTION_MESSAGE);
-        if (in == null)
-            return;
-        try {
-            int count = Integer.parseInt(in.trim());
-            if (count < 1 || count > remaining) {
-                showError("Please enter a number between 1 and " + remaining + ".");
-                return;
-            }
-            addRows(count);
-            selectCell(inputModel.getRowCount() - 1, COL_PID);
-        } catch (NumberFormatException ex) {
-            showError("Invalid input. Please enter a whole number.");
-        }
+        int n = (Integer) countSpinner.getValue();
+        while (inputModel.getRowCount() < n)
+            inputModel.addRow(new Object[] { "P" + (inputModel.getRowCount() + 1), "", "", "1" });
+        while (inputModel.getRowCount() > n)
+            inputModel.removeRow(inputModel.getRowCount() - 1);
     }
 
     private void loadSampleData() {
+        String[][] sample = { // AT, BT, Queue
+                { "0", "4", "1" }, { "0", "3", "1" }, { "0", "8", "2" }, { "10", "4", "1" }, { "12", "5", "2" } };
         stopEditing();
-        inputModel.setRowCount(0);
         quantumField.setText("4");
-        // Sample: Mix of Queue 1 (Round Robin) and Queue 2 (FCFS)
-        String[][] sample = {
-                { "P1", "0", "4", "1" },
-                { "P2", "0", "3", "1" },
-                { "P3", "0", "8", "2" },
-                { "P4", "10", "4", "1" },
-                { "P5", "12", "5", "2" }
-        };
-        for (String[] row : sample) {
-            inputModel.addRow(row);
-        }
+        countSpinner.setValue(sample.length);
+        for (int r = 0; r < sample.length; r++)
+            for (int c = 0; c < 3; c++)
+                inputModel.setValueAt(sample[r][c], r, c + 1);
     }
 
     private void resetAll() {
         stopEditing();
-        inputModel.setRowCount(0);
         quantumField.setText("4");
-        addRows(DEFAULT_ROWS);
+        countSpinner.setValue(DEFAULT_ROWS);
+        for (int r = 0; r < inputModel.getRowCount(); r++) {
+            inputModel.setValueAt("", r, COL_AT);
+            inputModel.setValueAt("", r, COL_BT);
+            inputModel.setValueAt("1", r, COL_QUEUE);
+        }
         outputModel.setRowCount(0);
         gantt.setBlocks(new ArrayList<>());
-        showAverages(null);
+        showStats(null);
     }
+
+    // ---------- run ----------
 
     private void runMultiLevel() {
         stopEditing();
         try {
-            int tq = parseQuantum();
-            List<Job> jobs = readInputs();
-            List<Block> blocks = MultiLevelScheduler.schedule(jobs, tq);
+            int quantum = readInt(quantumField.getText(), 1, 1000, -1, -1, "Time Quantum");
+            List<Job> jobs = readJobs();
+            Result res = MultiLevelScheduler.run(jobs, quantum);
 
             outputModel.setRowCount(0);
             for (Job j : jobs) {
-                outputModel.addRow(new Object[] {
-                        j.pid,
-                        "Q" + j.queue + (j.queue == 1 ? " (RR)" : " (FCFS)"),
-                        j.arrival,
-                        j.burst,
-                        j.completion,
-                        j.turnaround,
-                        j.waiting
-                });
+                outputModel.addRow(new Object[] { j.pid, j.queue == 1 ? "Q1 (RR)" : "Q2 (FCFS)", j.arrival, j.burst,
+                        j.completion, j.turnaround, j.waiting, res.response.get(j) });
             }
-
-            showAverages(MultiLevelScheduler.averages(jobs));
-            gantt.setBlocks(blocks);
+            showStats(res);
+            gantt.setBlocks(res.blocks);
         } catch (InvalidInput ex) {
             if (ex.row >= 0) {
-                selectCell(ex.row, ex.col);
+                inputTable.changeSelection(ex.row, ex.col, false, false);
                 inputTable.requestFocusInWindow();
             } else {
                 quantumField.requestFocusInWindow();
@@ -288,87 +216,34 @@ public class MultiLevel extends JPanel {
         }
     }
 
-    private int parseQuantum() throws InvalidInput {
-        String text = quantumField.getText().trim();
-        if (text.isEmpty()) {
-            throw new InvalidInput(-1, -1, "Time Quantum cannot be empty.");
-        }
-        try {
-            int val = Integer.parseInt(text);
-            if (val > 0 && val <= 1000) return val;
-        } catch (NumberFormatException ignored) {}
-        throw new InvalidInput(-1, -1, "Time Quantum must be a whole number between 1 and 1000.");
-    }
-
-    private String cell(int r, int c) {
-        Object v = inputModel.getValueAt(r, c);
-        return v == null ? "" : v.toString().trim();
-    }
-
-    private List<Job> readInputs() throws InvalidInput {
-        int rows = inputModel.getRowCount();
-        if (rows == 0 || rows > MAX_PROCESSES)
-            throw new InvalidInput(-1, -1, "Number of processes must be between 1 and " + MAX_PROCESSES + ".");
-
+    private List<Job> readJobs() throws InvalidInput {
         List<Job> jobs = new ArrayList<>();
-        Set<String> seen = new HashSet<>();
-
-        for (int i = 0; i < rows; i++) {
-            String pid = cell(i, COL_PID);
-            if (!pid.matches("^[Pp]\\d+$")) {
-                throw new InvalidInput(i, COL_PID,
-                        "Row " + (i + 1) + ": Process ID must be P followed by numbers (e.g., P1).");
-            }
-            if (pid.charAt(0) == 'p') {
-                pid = "P" + pid.substring(1);
-                inputModel.setValueAt(pid, i, COL_PID);
-            }
-            if (!seen.add(pid)) {
-                throw new InvalidInput(i, COL_PID, "Row " + (i + 1) + ": Duplicate PID '" + pid + "'.");
-            }
-
-            int at = parseNonNeg(cell(i, COL_AT), i, COL_AT, "Row " + (i + 1) + " Arrival Time");
-            int bt = parsePos(cell(i, COL_BT), i, COL_BT, "Row " + (i + 1) + " Burst Time");
-            int q = parseQueue(cell(i, COL_QUEUE), i, COL_QUEUE, "Row " + (i + 1) + " Queue");
-
-            jobs.add(new Job(pid, at, bt, 0, q, i));
+        for (int i = 0; i < inputModel.getRowCount(); i++) {
+            String row = "Row " + (i + 1);
+            int at = readInt(cellText(i, COL_AT), 0, MAX_TIME, i, COL_AT, row + " Arrival Time");
+            int bt = readInt(cellText(i, COL_BT), 1, MAX_TIME, i, COL_BT, row + " Burst Time");
+            int q = readInt(cellText(i, COL_QUEUE), 1, 2, i, COL_QUEUE, row + " Queue (1 = RR, 2 = FCFS)");
+            jobs.add(new Job("P" + (i + 1), at, bt, 0, q, i));
         }
         return jobs;
     }
 
-    private int parseNonNeg(String text, int row, int col, String label) throws InvalidInput {
-        if (text.isEmpty())
-            throw new InvalidInput(row, col, label + " is empty.");
-        try {
-            int val = Integer.parseInt(text);
-            if (val >= 0 && val <= MAX_TIME)
-                return val;
-        } catch (NumberFormatException ignored) {
-        }
-        throw new InvalidInput(row, col, label + " must be a whole number between 0 and " + MAX_TIME + ".");
+    private String cellText(int row, int col) {
+        Object v = inputModel.getValueAt(row, col);
+        return v == null ? "" : v.toString().trim();
     }
 
-    private int parsePos(String text, int row, int col, String label) throws InvalidInput {
+    /** One parser for every numeric field: whole number in [min, max] or an InvalidInput. */
+    private static int readInt(String text, int min, int max, int row, int col, String label) throws InvalidInput {
+        text = text.trim();
         if (text.isEmpty())
             throw new InvalidInput(row, col, label + " is empty.");
         try {
             int val = Integer.parseInt(text);
-            if (val >= 1 && val <= MAX_TIME)
+            if (val >= min && val <= max)
                 return val;
         } catch (NumberFormatException ignored) {
         }
-        throw new InvalidInput(row, col, label + " must be a whole number between 1 and " + MAX_TIME + ".");
-    }
-
-    private int parseQueue(String text, int row, int col, String label) throws InvalidInput {
-        if (text.isEmpty())
-            throw new InvalidInput(row, col, label + " is empty.");
-        try {
-            int val = Integer.parseInt(text);
-            if (val == 1 || val == 2)
-                return val;
-        } catch (NumberFormatException ignored) {
-        }
-        throw new InvalidInput(row, col, label + " must be 1 (Queue 1: RR) or 2 (Queue 2: FCFS).");
+        throw new InvalidInput(row, col, label + " must be a whole number between " + min + " and " + max + ".");
     }
 }
