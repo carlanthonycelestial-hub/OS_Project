@@ -106,7 +106,7 @@ public class SJF extends JPanel {
         center.add(right);
         add(center, BorderLayout.CENTER);
 
-        JPanel bottom = titledPanel("3. Gantt Chart (Time Scale)");
+        JPanel bottom = titledPanel("3. Gantt Chart");
         bottom.setPreferredSize(new Dimension(0, 98));
         bottom.add(gantt, BorderLayout.CENTER);
         add(bottom, BorderLayout.SOUTH);
